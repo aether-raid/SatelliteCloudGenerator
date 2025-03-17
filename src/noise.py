@@ -95,7 +95,7 @@ def default_weight(input, const_scale=True, decay_factor=1):
 #     return output_transform(torch.fft.irfft2(torch.fft.fftshift(M,0)*x_f))
 
 def flex_noise(shape=(256, 256), spectral_weight=default_weight, const_scale=False, decay_factor=1, batch=1, device='cpu'):
-    height, weight = shape
+    height, width = shape
     
     x = torch.rand(batch, height, height, device=device) - 0.5    
     x_f = torch.fft.rfft2(x)
