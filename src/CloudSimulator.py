@@ -277,9 +277,9 @@ def add_cloud(input,
     for idx in range(locality_degree):
         # generate noise shape
         if noise_type == 'perlin':
-            noise_shape=generate_perlin(shape=(h,w), batch=b, device=device, const_scale=const_scale, decay_factor=decay_factor)     
+            noise_shape= generate_perlin(shape=(h,w), batch=b, device=device, const_scale=const_scale, decay_factor=decay_factor)
         elif noise_type == 'flex':
-            noise_shape = flex_noise(h,w, const_scale=const_scale, decay_factor=decay_factor)
+            noise_shape = flex_noise(shape=(h,w), batch=b, device=device, const_scale=const_scale, decay_factor=decay_factor)
         else:
             raise NotImplementedError
 

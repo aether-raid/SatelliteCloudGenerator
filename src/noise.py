@@ -70,26 +70,54 @@ def default_weight(input, const_scale=True, decay_factor=1):
         ret = torch.exp(-factor_multiplier*decay_factor*input)
     return ret
 
-def flex_noise(width, height, spectral_weight=default_weight, const_scale=False, decay_factor=1):
-    raise NotImplemented # This needs to be converted to work with batches, and also generate full on the requested device
-    # Source Noise
-    x = torch.rand(width,height) - 0.5    
+# def flex_noise(width, height, spectral_weight=default_weight, const_scale=False, decay_factor=1):
+#     raise NotImplemented # This needs to be converted to work with batches, and also generate full on the requested device
+#     # Source Noise
+#     x = torch.rand(width,height) - 0.5    
+#     x_f = torch.fft.rfft2(x)
+    
+#     # Weight Space (value proportional to euclidean distance from DC)
+#     x_space = torch.abs(torch.arange(-x_f.shape[0]/2,
+#                                      x_f.shape[0]/2,
+#                                      1.0))*(x.shape[1]/x.shape[0]) # scaling to preserve 'aspect'
+#     y_space = torch.abs(torch.arange(0,
+#                                      x_f.shape[1],
+#                                      1.0))    
+#     X_grid,Y_grid = torch.meshgrid(x_space,y_space)
+
+#     W_space = (X_grid**2+Y_grid**2)**0.5
+#     W_space /= W_space.max()    
+
+#     # Modulation of Weight
+#     M = spectral_weight(W_space, const_scale=const_scale, decay_factor=decay_factor)
+    
+#     # Application to Noise Spectrum
+#     return output_transform(torch.fft.irfft2(torch.fft.fftshift(M,0)*x_f))
+
+def flex_noise(shape=(256, 256), spectral_weight=default_weight, const_scale=False, decay_factor=1, batch=1, device='cpu'):
+    height, weight = shape
+    
+    x = torch.rand(batch, height, height, device=device) - 0.5    
     x_f = torch.fft.rfft2(x)
     
-    # Weight Space (value proportional to euclidean distance from DC)
-    x_space = torch.abs(torch.arange(-x_f.shape[0]/2,
-                                     x_f.shape[0]/2,
-                                     1.0))*(x.shape[1]/x.shape[0]) # scaling to preserve 'aspect'
-    y_space = torch.abs(torch.arange(0,
-                                     x_f.shape[1],
-                                     1.0))    
-    X_grid,Y_grid = torch.meshgrid(x_space,y_space)
-
-    W_space = (X_grid**2+Y_grid**2)**0.5
-    W_space /= W_space.max()    
-
-    # Modulation of Weight
+    # Create frequency coordinate grid
+    x_space = torch.abs(torch.arange(-width//2, width//2, 1.0, device=device)) * (height/width)
+    y_space = torch.abs(torch.arange(0, x_f.shape[2], 1.0, device=device))
+    
+    X_grid, Y_grid = torch.meshgrid(x_space, y_space, indexing='ij')
+    
+    # Compute distance grid (Euclidean distance from origin)
+    W_space = torch.sqrt(X_grid**2 + Y_grid**2)
+    W_space = W_space / W_space.max()  # Normalize to [0,1]
+    
+    # Apply spectral weight function to create filter
     M = spectral_weight(W_space, const_scale=const_scale, decay_factor=decay_factor)
     
-    # Application to Noise Spectrum
-    return output_transform(torch.fft.irfft2(torch.fft.fftshift(M,0)*x_f))
+    M_shifted = torch.fft.fftshift(M, dim=0)
+    M_batched = M_shifted.unsqueeze(0).expand(batch, -1, -1)
+    
+    filtered_x_f = x_f * M_batched
+    
+    result = torch.fft.irfft2(filtered_x_f)
+    
+    return output_transform(result)
