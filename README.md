@@ -36,7 +36,7 @@ If you found this tool useful, please cite accordingly:
 
 ### Installation
 ```bash
-pip install git+https://github.com/strath-ai/SatelliteCloudGenerator
+pip install git+https://github.com/aether-raid/SatelliteCloudGenerator
 ```
 
 and then import:
